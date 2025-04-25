@@ -5,6 +5,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from dotenv import load_dotenv
 import time
 from datetime import datetime
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Enable logging
 logging.basicConfig(
@@ -21,12 +23,27 @@ REQUESTS_CHANNEL_ID = os.getenv("REQUESTS_CHANNEL_ID")
 REQUIRED_CHANNEL_ID = os.getenv("REQUIRED_CHANNEL_ID")
 REQUIRED_CHANNEL_USERNAME = os.getenv("REQUIRED_CHANNEL_USERNAME", "").replace("@", "")
 
+# Get PORT from environment variable for deployment platforms
+PORT = int(os.getenv("PORT", "8080"))
+
 # Dictionary to store pending requests
 # Format: {request_id: {'user_id': user_id, 'message_id': message_id, 'status': 'pending', 'timestamp': timestamp}}
 pending_requests = {}
 
 # Dict to track user membership status
 user_membership_status = {}
+
+# Simple HTTP request handler for health check
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+    
+    def log_message(self, format, *args):
+        # Suppress HTTP server logs to avoid cluttering the console
+        return
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
@@ -574,8 +591,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         reply_markup=reply_markup
     )
 
+def start_http_server():
+    """Start HTTP server for health checks in a separate thread."""
+    server_address = ('', PORT)
+    httpd = HTTPServer(server_address, HealthCheckHandler)
+    logger.info(f"Starting HTTP server on port {PORT}")
+    httpd.serve_forever()
+
 def main() -> None:
     """Start the bot."""
+    # Start HTTP server in a separate thread
+    http_thread = threading.Thread(target=start_http_server, daemon=True)
+    http_thread.start()
+    logger.info(f"HTTP server started on port {PORT}")
+    
     # Create the Application
     application = Application.builder().token(TOKEN).build()
 
