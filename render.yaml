@@ -1,0 +1,19 @@
+services:
+  - type: worker
+    name: telegram-file-finder-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHANNEL_ID
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: REQUESTS_CHANNEL_ID
+        sync: false
+      - key: REQUIRED_CHANNEL_ID
+        sync: false
+      - key: REQUIRED_CHANNEL_USERNAME
+        sync: false
